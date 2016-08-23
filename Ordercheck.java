@@ -63,14 +63,15 @@ public class Ordercheck extends Activity implements AdapterView.OnItemClickListe
         int quantityIndex = cursor.getColumnIndex(Database.Columns.NUM);
 
         // 5. 行を読み込む。
-        itemList.removeAll(itemList);
+//        itemList.removeAll(itemList);
         msg += "これらの商品を購入してもよろしいですか？\n\n";
         msg += item.idx+"\n\n";
+
         do {
             item._id = cursor.getInt(_idIndex);
             item.name = cursor.getString(nameIndex);
             item.price = cursor.getInt(priceIndex);
-            item.num = cursor.getInt(quantityIndex);
+            item.num = item.idx;//cursor.getInt(quantityIndex);
 
             Log.d("selectProductList",
                     "_id = " + item._id + "\n" +
@@ -78,10 +79,10 @@ public class Ordercheck extends Activity implements AdapterView.OnItemClickListe
                             "price = " + item.price + "\n" +
                             "stock = " + item.num);
 
-            itemList.add(item);
-
-            msg += item.name + "  　　" + item.num + "個 　　 " + item.price + "円\n";
-            priceSum += item.price;
+//            itemList.add(item);
+            Log.d("item", String.valueOf(itemList.get(item._id -1).name));
+            msg += item.name + "  　　" + itemList.get(item._id -1).idx + "個 　　 " + item.price + "円\n";
+            priceSum += (item.price * item.idx);
 
             // 読込位置を次の行に移動させる
             // 次の行が無い時はfalseを返すのでループを抜ける
@@ -119,19 +120,19 @@ public class Ordercheck extends Activity implements AdapterView.OnItemClickListe
         );
 
         alertDlg.create().show();
-
     }
 
     @Override
     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
 
     }
+
     private class ProductItem {
         int _id;
         String name;
         int price;
         int num;
-        String idx = "1";
+        int idx = 1;
     }
 
     private List<ProductItem> itemList;
@@ -162,12 +163,13 @@ public class Ordercheck extends Activity implements AdapterView.OnItemClickListe
 
         // 5. 行を読み込む。
         itemList.removeAll(itemList);
+
         do {
             ProductItem item = new ProductItem();
             item._id = cursor.getInt(_idIndex);
             item.name = cursor.getString(nameIndex);
             item.price = cursor.getInt(priceIndex);
-            item.num = Integer.parseInt(item.idx);//cursor.getInt(quantityIndex);
+            item.num = cursor.getInt(quantityIndex);
 
             Log.d("selectProductList",
                     "_id = " + item._id + "\n" +
@@ -217,6 +219,10 @@ public class Ordercheck extends Activity implements AdapterView.OnItemClickListe
             @Override
             public void run() {
                 setProductData();
+                ProductItem Item = new ProductItem();
+
+                Item._id = itemList.get(item._id)._id;
+                Item.name = itemList.get(item._id).name;
 
                 //メインスレッドのメッセージキューにメッセージを登録します。
                 mHandler.post(new Runnable (){
@@ -375,15 +381,16 @@ public class Ordercheck extends Activity implements AdapterView.OnItemClickListe
         }
 
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
+        public View getView(final int position, View convertView, ViewGroup parent) {
 
             Log.d("ProductList", "getView");
-
+            Log.d("product", String.valueOf(position));
 
             View view = inflater.inflate(R.layout.order_row, null, false);
             TextView nameView = (TextView)view.findViewById(R.id.name);
             TextView priceView = (TextView)view.findViewById(R.id.price);
-//            TextView quantityView = (TextView)view.findViewById(R.id.productspinner);
+//            Spinner quantityView = (Spinner) view.findViewById(R.id.productspinner);
+
 
 
             ArrayAdapter<String> adapter = new ArrayAdapter<>(Ordercheck.this, R.layout.my_spinner_item);
@@ -391,19 +398,28 @@ public class Ordercheck extends Activity implements AdapterView.OnItemClickListe
             for (int i = 1; i <= 100/*ここに数量を入れる*/; i++) {
                 adapter.add(String.valueOf(i));
             }
+
             adapter.setDropDownViewResource(R.layout.my_spinner_drop_down_item);
             productSpinner = (Spinner)view.findViewById(R.id.productspinner);
             productSpinner.setAdapter(adapter);
             productSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
                 @Override
                 public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                     Spinner spinner = (Spinner) adapterView;
+                    Log.d("onItemSelected: i", String.valueOf(i));
                     Log.d("onItemSelected", (String)spinner.getSelectedItem());
-                    item.idx = (String)spinner.getSelectedItem();
+
+                    ProductItem Item = new ProductItem();
+
+                    Item._id = itemList.get(position)._id;
+                    Item.name = itemList.get(position).name;
+                    Item.idx = Integer.parseInt(spinner.getSelectedItem().toString());
+
+                    itemList.set(position, Item);
+//                    itemList.add(position, Item);
 //                    showToast(Integer.toString(spinner.getSelectedItemPosition()));
-
                 }
-
                 @Override
                 public void onNothingSelected(AdapterView<?> adapterView) {
 
@@ -417,6 +433,7 @@ public class Ordercheck extends Activity implements AdapterView.OnItemClickListe
             ProductItem item = getItem(position);
             nameView.setText(item.name);
             priceView.setText(String.valueOf(item.price));
+
 //            quantityView.setText(String.valueOf(item.num));
             return view;
 
